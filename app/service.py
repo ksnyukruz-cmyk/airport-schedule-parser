@@ -10,6 +10,7 @@ from pathlib import Path
 from app.flights import MOSCOW
 from app.http_client import SourceError
 from app.hubs import HUB_BY_CODE, HUBS, PRIMARY, PRIMARY_LABELS
+from app.places import country_for
 from app.sources import dme, live, pulkovo, svo
 
 DATA = Path(__file__).resolve().parent / "data" / "airports.json"
@@ -136,10 +137,16 @@ def get_schedule(code: str, direction: str, day: date, refresh: bool = False) ->
         "notice": loaded.get("notice") or "",
         "stale": False,
         "warning": loaded.get("warning") or "",
-        "flights": loaded["flights"],
+        "flights": [_with_country(flight) for flight in loaded["flights"]],
     }
     _cache[key] = (now, board)
     return board
+
+
+def _with_country(flight: dict) -> dict:
+    annotated = dict(flight)
+    annotated["country"] = country_for(flight.get("city_code") or "", flight.get("city") or "")
+    return annotated
 
 
 def _load(airport: dict, direction: str, day: date, refresh: bool = False) -> dict:

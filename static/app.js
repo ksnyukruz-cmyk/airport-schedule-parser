@@ -35,6 +35,12 @@ const metaEl = document.querySelector("#meta");
 const emptyEl = document.querySelector("#empty");
 const boardEl = document.querySelector("#board");
 const datesEl = document.querySelector("#dates");
+const analyticsEl = document.querySelector("#analytics");
+const analyticsNoteEl = document.querySelector("#analytics-note");
+const analyticsCardsEl = document.querySelector("#analytics-cards");
+const analyticsSplitEl = document.querySelector("#analytics-split");
+const analyticsCountriesEl = document.querySelector("#analytics-countries");
+const analyticsCitiesEl = document.querySelector("#analytics-cities");
 
 readUrl();
 renderChips();
@@ -192,6 +198,7 @@ function renderBoard() {
   document.querySelector("#gate-head").textContent = board.direction === "arrival" ? "Лента" : "Выход";
   const visible = filtered(board.flights || []);
   renderStats(board.flights || [], visible);
+  renderAnalytics(board);
   noticeEl.hidden = !board.notice && !board.warning;
   noticeEl.textContent = [board.warning, board.notice].filter(Boolean).join(" ");
   const when = board.fetched_at ? formatClock(board.fetched_at) : "";
@@ -228,6 +235,120 @@ function renderRow(flight) {
     <td><span class="pill ${tone(flight.status)}">${escapeHtml(flight.status || "По расписанию")}</span></td>
     <td>${escapeHtml(flight.aircraft || "—")}</td>
   </tr>`;
+}
+
+function renderAnalytics(board) {
+  const flights = board.flights || [];
+  const destinations = new Map();
+  const airlines = new Set();
+  for (const flight of flights) {
+    const code = (flight.city_code || "").trim().toUpperCase();
+    const cityName = (flight.city || "").trim();
+    const key = code || cityName.toUpperCase();
+    if (!key) continue;
+    if (!destinations.has(key)) {
+      destinations.set(key, {
+        city: titleCase(cityName) || code,
+        country: flight.country || "",
+        flights: 0,
+      });
+    }
+    const item = destinations.get(key);
+    item.flights += 1;
+    if (!item.country && flight.country) item.country = flight.country;
+    const airline = (flight.airline || flight.airline_code || "").trim();
+    if (airline) airlines.add(airline);
+  }
+  const items = [...destinations.values()];
+  const russia = items.filter((item) => item.country === "Россия");
+  const foreign = items.filter((item) => item.country && item.country !== "Россия");
+  const unknown = items.filter((item) => !item.country);
+  const flightCount = (list) => list.reduce((sum, item) => sum + item.flights, 0);
+  const live = board.airport && (board.airport.kind === "live" || !board.airport.supports_date);
+  analyticsEl.hidden = false;
+  analyticsNoteEl.textContent = live
+    ? "По рейсам, которые сейчас есть на табло. Одно направление — один город."
+    : "По рейсам на выбранную дату. Одно направление — один город.";
+  const cards = [
+    ["Направлений", items.length, flightWord(flights.length), ""],
+    ["По России", russia.length, flightWord(flightCount(russia)), "ru"],
+    ["За рубеж", foreign.length, flightWord(flightCount(foreign)), "foreign"],
+    ["Авиакомпаний", airlines.size, unknown.length ? `${unknown.length} без страны` : "по этому табло", ""],
+  ];
+  analyticsCardsEl.innerHTML = cards
+    .map(
+      ([label, value, sub, tone]) => `<article class="card ${tone}">
+        <strong>${value}</strong>
+        <span>${label}</span>
+        <small>${sub}</small>
+      </article>`
+    )
+    .join("");
+  const total = items.length || 1;
+  const ruWidth = Math.round((russia.length / total) * 100);
+  const foreignWidth = Math.round((foreign.length / total) * 100);
+  analyticsSplitEl.hidden = items.length === 0;
+  analyticsSplitEl.innerHTML = `<span class="split-ru" style="width:${ruWidth}%"></span>
+    <span class="split-foreign" style="width:${foreignWidth}%"></span>
+    <span class="split-unknown" style="width:${Math.max(0, 100 - ruWidth - foreignWidth)}%"></span>`;
+  const countries = new Map();
+  for (const item of items) {
+    if (!item.country) continue;
+    if (!countries.has(item.country)) countries.set(item.country, { destinations: 0, flights: 0 });
+    const row = countries.get(item.country);
+    row.destinations += 1;
+    row.flights += item.flights;
+  }
+  const countryRows = [...countries.entries()]
+    .sort((a, b) => b[1].destinations - a[1].destinations || b[1].flights - a[1].flights)
+    .slice(0, 6);
+  const cityRows = [...items].sort((a, b) => b.flights - a.flights || a.city.localeCompare(b.city, "ru")).slice(0, 6);
+  analyticsCountriesEl.innerHTML = countryRows.length
+    ? barList(
+        countryRows.map(([name, row]) => ({
+          name,
+          value: row.destinations,
+          hint: flightWord(row.flights),
+        })),
+        countryRows[0][1].destinations
+      )
+    : `<p class="quiet">Страны пока не определились.</p>`;
+  analyticsCitiesEl.innerHTML = cityRows.length
+    ? barList(
+        cityRows.map((item) => ({
+          name: item.city,
+          value: item.flights,
+          hint: item.country || "страна не определена",
+        })),
+        cityRows[0].flights
+      )
+    : `<p class="quiet">Городов нет.</p>`;
+}
+
+function barList(rows, max) {
+  return rows
+    .map((row) => {
+      const width = max ? Math.max(6, Math.round((row.value / max) * 100)) : 0;
+      return `<div class="bar-row" title="${escapeAttr(row.hint)}">
+        <span class="bar-name">${escapeHtml(row.name)}</span>
+        <span class="bar-track"><span class="bar-fill" style="width:${width}%"></span></span>
+        <span class="bar-value">${row.value}</span>
+      </div>`;
+    })
+    .join("");
+}
+
+function flightWord(count) {
+  return `${count} ${plural(count, "рейс", "рейса", "рейсов")}`;
+}
+
+function plural(count, one, few, many) {
+  const abs = Math.abs(count) % 100;
+  const last = abs % 10;
+  if (abs > 10 && abs < 20) return many;
+  if (last === 1) return one;
+  if (last >= 2 && last <= 4) return few;
+  return many;
 }
 
 function renderStats(all, visible) {
@@ -283,12 +404,13 @@ function delayLabel(flight) {
 
 function downloadCsv() {
   const flights = state.board ? filtered(state.board.flights || []) : [];
-  const header = ["Время", "Рейс", "Город", "Код", "Авиакомпания", "Терминал", "Выход", "Лента", "Статус", "Борт", "Ожидаемое", "Фактическое"];
+  const header = ["Время", "Рейс", "Город", "Код", "Страна", "Авиакомпания", "Терминал", "Выход", "Лента", "Статус", "Борт", "Ожидаемое", "Фактическое"];
   const lines = [header, ...flights.map((flight) => [
     flight.scheduled || "",
     flight.flight,
     flight.city,
     flight.city_code,
+    flight.country,
     flight.airline,
     flight.terminal,
     flight.gate,

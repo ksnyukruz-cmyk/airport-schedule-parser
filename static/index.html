@@ -63,28 +63,51 @@
     <p id="notice" class="banner" hidden></p>
     <p id="error" class="banner bad" hidden></p>
 
-    <section id="stats" class="stats" aria-live="polite"></section>
-    <div id="chips" class="chips" role="toolbar" aria-label="Фильтр статуса"></div>
-    <p id="meta" class="meta"></p>
+    <section id="analytics" class="analytics" aria-label="Аналитика направлений" hidden>
+      <div class="analytics-head">
+        <h2>Направления</h2>
+        <p id="analytics-note"></p>
+      </div>
+      <div id="analytics-cards" class="cards"></div>
+      <div id="analytics-split" class="split" hidden></div>
+      <div class="analytics-grid">
+        <div>
+          <h3>Страны</h3>
+          <div id="analytics-countries" class="bars"></div>
+        </div>
+        <div>
+          <h3>Города</h3>
+          <div id="analytics-cities" class="bars"></div>
+        </div>
+      </div>
+    </section>
 
-    <div class="board" id="board">
-      <table>
-        <thead>
-          <tr>
-            <th>Время</th>
-            <th>Рейс</th>
-            <th id="city-head">Куда</th>
-            <th>Авиакомпания</th>
-            <th>Терминал</th>
-            <th id="gate-head">Выход</th>
-            <th>Статус</th>
-            <th>Борт</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
-    <p id="empty" class="empty" hidden>На эту дату рейсов нет.</p>
+    <section class="schedule" aria-label="Расписание">
+      <div class="schedule-head">
+        <h2>Расписание</h2>
+        <p id="meta" class="meta"></p>
+      </div>
+      <div id="chips" class="chips" role="toolbar" aria-label="Фильтр статуса"></div>
+      <section id="stats" class="stats" aria-live="polite"></section>
+      <div class="board" id="board">
+        <table>
+          <thead>
+            <tr>
+              <th>Время</th>
+              <th>Рейс</th>
+              <th id="city-head">Куда</th>
+              <th>Авиакомпания</th>
+              <th>Терминал</th>
+              <th id="gate-head">Выход</th>
+              <th>Статус</th>
+              <th>Борт</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p id="empty" class="empty" hidden>На эту дату рейсов нет.</p>
+    </section>
 
     <footer>
       <p>Шереметьево, Домодедово и Пулково читаются с официальных табло. Внуково и остальные хабы показаны по живым рейсам рядом с аэропортом. Это не официальный сервис аэропорта.</p>
