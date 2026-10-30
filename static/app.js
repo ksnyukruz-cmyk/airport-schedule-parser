@@ -1,4 +1,4 @@
-const POPULAR = ["SVO", "DME", "LED", "LHR", "CDG", "FRA", "AMS", "IST", "DXB", "DOH", "SIN", "HND", "ICN", "JFK", "LAX", "MAD"];
+const PRIMARY = ["LED", "DME", "SVO", "VKO"];
 
 const state = {
   airports: [],
@@ -21,10 +21,9 @@ const chips = [
   ["done", "Завершённые"],
 ];
 
-const airportQueryEl = document.querySelector("#airport-query");
-const airportResultsEl = document.querySelector("#airport-results");
+const primaryEl = document.querySelector("#primary");
+const hubsEl = document.querySelector("#hubs");
 const airportCountEl = document.querySelector("#airport-count");
-const popularEl = document.querySelector("#popular");
 const rowsEl = document.querySelector("#rows");
 const queryEl = document.querySelector("#query");
 const dateEl = document.querySelector("#date");
@@ -67,20 +66,13 @@ function bind() {
     state.query = queryEl.value.trim();
     renderBoard();
   });
-  airportQueryEl.addEventListener("input", renderAirportResults);
-  airportQueryEl.addEventListener("focus", renderAirportResults);
-  airportResultsEl.addEventListener("click", (event) => {
+  primaryEl.addEventListener("click", (event) => {
     const button = event.target.closest("[data-code]");
     if (!button) return;
     chooseAirport(button.dataset.code);
   });
-  popularEl.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-code]");
-    if (!button) return;
-    chooseAirport(button.dataset.code);
-  });
-  document.addEventListener("click", (event) => {
-    if (!event.target.closest(".picker")) airportResultsEl.hidden = true;
+  hubsEl.addEventListener("change", () => {
+    if (hubsEl.value) chooseAirport(hubsEl.value);
   });
   document.querySelector("#refresh").addEventListener("click", () => load(true));
   document.querySelector("#csv").addEventListener("click", downloadCsv);
@@ -112,44 +104,35 @@ async function boot() {
 function renderPicker() {
   const selected = currentAirport();
   airportCountEl.textContent = selected
-    ? `${selected.name} · ${selected.city}${selected.country ? ", " + selected.country : ""} · ${state.airports.length} крупных аэропортов`
-    : `${state.airports.length} крупных аэропортов`;
-  popularEl.innerHTML = POPULAR.filter((code) => state.airports.some((item) => item.code === code))
-    .map(
-      (code) =>
-        `<button type="button" data-code="${code}" class="${code === state.airport ? "is-on" : ""}">${code}</button>`
-    )
-    .join("");
-}
-
-function renderAirportResults() {
-  const query = airportQueryEl.value.trim().toLowerCase();
-  if (!query) {
-    airportResultsEl.hidden = true;
-    airportResultsEl.innerHTML = "";
-    return;
+    ? `${selected.name} · ${selected.city}${selected.country ? ", " + selected.country : ""}`
+    : "";
+  primaryEl.querySelectorAll("[data-code]").forEach((button) => {
+    const on = button.dataset.code === state.airport;
+    button.classList.toggle("is-on", on);
+    button.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  const groups = new Map();
+  for (const airport of state.airports) {
+    if (PRIMARY.includes(airport.code)) continue;
+    if (!groups.has(airport.group)) groups.set(airport.group, []);
+    groups.get(airport.group).push(airport);
   }
-  const matches = state.airports
-    .filter((item) =>
-      [item.code, item.name, item.city, item.country, item.keywords].join(" ").toLowerCase().includes(query)
-    )
-    .slice(0, 12);
-  airportResultsEl.hidden = matches.length === 0;
-  airportResultsEl.innerHTML = matches
-    .map(
-      (item) => `<button type="button" data-code="${item.code}">
-        <span class="code">${escapeHtml(item.code)}</span>
-        <span>${escapeHtml(item.name)}</span>
-        <span class="city">${escapeHtml([item.city, item.country].filter(Boolean).join(", "))}</span>
-      </button>`
-    )
-    .join("");
+  const options = [`<option value="">Другие хабы</option>`];
+  for (const [group, items] of groups) {
+    options.push(`<optgroup label="${escapeHtml(group)}">`);
+    for (const item of items) {
+      options.push(
+        `<option value="${escapeHtml(item.code)}">${escapeHtml(item.code)} — ${escapeHtml(item.city)}</option>`
+      );
+    }
+    options.push("</optgroup>");
+  }
+  hubsEl.innerHTML = options.join("");
+  hubsEl.value = PRIMARY.includes(state.airport) ? "" : state.airport;
 }
 
 function chooseAirport(code) {
   state.airport = code;
-  airportQueryEl.value = "";
-  airportResultsEl.hidden = true;
   renderPicker();
   load();
 }

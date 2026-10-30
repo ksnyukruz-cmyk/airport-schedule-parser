@@ -28,13 +28,19 @@
     </header>
 
     <section class="picker" aria-label="Аэропорт">
-      <label class="search">
-        <span class="sr">Аэропорт</span>
-        <input id="airport-query" type="search" placeholder="Аэропорт, город или код: SVO, Москва, London, Dubai" autocomplete="off">
+      <div id="primary" class="primary" role="tablist" aria-label="Основные аэропорты">
+        <button type="button" role="tab" data-code="LED"><span class="code">LED</span><span>Пулково</span></button>
+        <button type="button" role="tab" data-code="DME"><span class="code">DME</span><span>Домодедово</span></button>
+        <button type="button" role="tab" data-code="SVO" class="is-on"><span class="code">SVO</span><span>Шереметьево</span></button>
+        <button type="button" role="tab" data-code="VKO"><span class="code">VKO</span><span>Внуково</span></button>
+      </div>
+      <label class="hubs">
+        <span class="sr">Другие хабы</span>
+        <select id="hubs" aria-label="Другие хабы">
+          <option value="">Другие хабы</option>
+        </select>
       </label>
-      <div id="airport-results" class="results" hidden></div>
       <p id="airport-count" class="meta"></p>
-      <div id="popular" class="popular"></div>
     </section>
 
     <section class="toolbar">
@@ -81,7 +87,7 @@
     <p id="empty" class="empty" hidden>На эту дату рейсов нет.</p>
 
     <footer>
-      <p>Шереметьево, Домодедово и Пулково читаются с их официальных табло. Остальные крупные аэропорты показаны по живым рейсам рядом с аэропортом. Это не официальный сервис аэропорта.</p>
+      <p>Шереметьево, Домодедово и Пулково читаются с официальных табло. Внуково и остальные хабы показаны по живым рейсам рядом с аэропортом. Это не официальный сервис аэропорта.</p>
     </footer>
   </div>
   <script src="/static/app.js"></script>

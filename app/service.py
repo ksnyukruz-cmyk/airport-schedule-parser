@@ -9,6 +9,7 @@ from pathlib import Path
 
 from app.flights import MOSCOW
 from app.http_client import SourceError
+from app.hubs import HUB_BY_CODE, HUBS, PRIMARY, PRIMARY_LABELS
 from app.sources import dme, live, pulkovo, svo
 
 DATA = Path(__file__).resolve().parent / "data" / "airports.json"
@@ -39,8 +40,11 @@ def _catalog() -> dict[str, dict]:
     rows = json.loads(DATA.read_text(encoding="utf-8"))
     airports = {}
     for row in rows:
+        code = row["code"]
+        if code not in PRIMARY and code not in HUB_BY_CODE:
+            continue
         airport = dict(row)
-        official = OFFICIAL.get(airport["code"])
+        official = OFFICIAL.get(code)
         if official:
             airport["supports_date"] = official["supports_date"]
             airport["kind"] = "official"
@@ -49,7 +53,14 @@ def _catalog() -> dict[str, dict]:
             airport["supports_date"] = False
             airport["kind"] = "live"
             airport["source_name"] = "Живые рейсы рядом с аэропортом"
-        airports[airport["code"]] = airport
+        if code in HUB_BY_CODE:
+            airport["role"] = "hub"
+            airport["group"], airport["label"] = HUB_BY_CODE[code]
+        else:
+            airport["role"] = "primary"
+            airport["group"] = ""
+            airport["name"], airport["label"] = PRIMARY_LABELS[code]
+        airports[code] = airport
     return airports
 
 
@@ -57,17 +68,26 @@ AIRPORTS = _catalog()
 
 
 def list_airports() -> list[dict]:
+    ordered = [AIRPORTS[code] for code in PRIMARY if code in AIRPORTS]
+    hubs = [airport for airport in AIRPORTS.values() if airport["role"] == "hub"]
+    group_order = []
+    for _code, group, _city in HUBS:
+        if group not in group_order:
+            group_order.append(group)
+    hubs.sort(key=lambda item: (group_order.index(item["group"]), item["label"]))
     visible = []
-    for airport in AIRPORTS.values():
+    for airport in ordered + hubs:
         visible.append(
             {
                 "code": airport["code"],
                 "name": airport["name"],
-                "city": airport["city"],
+                "city": airport["label"],
                 "country": airport["country"],
                 "keywords": airport.get("keywords") or "",
                 "supports_date": airport["supports_date"],
                 "kind": airport["kind"],
+                "role": airport["role"],
+                "group": airport["group"],
             }
         )
     return visible

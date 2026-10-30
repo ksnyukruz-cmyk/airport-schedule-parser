@@ -8,20 +8,25 @@ LHR = {"code": "LHR", "icao": "EGLL", "lat": 51.47, "lon": -0.46}
 
 
 class LiveBoardTests(unittest.TestCase):
-    def test_catalog_covers_major_airports(self):
+    def test_catalog_keeps_hubs_and_drops_europe(self):
         airports = list_airports()
-        codes = {item["code"] for item in airports}
-        self.assertGreater(len(airports), 400)
-        self.assertIn("SVO", codes)
-        self.assertIn("LHR", codes)
-        self.assertIn("JFK", codes)
-        self.assertIn("HND", codes)
+        codes = [item["code"] for item in airports]
+        unique = set(codes)
+        self.assertEqual(codes[:4], ["LED", "DME", "SVO", "VKO"])
+        self.assertIn("IST", unique)
+        self.assertIn("DXB", unique)
+        self.assertIn("JFK", unique)
+        self.assertIn("HND", unique)
+        for europe in ("LHR", "CDG", "FRA", "AMS", "MAD", "BCN", "FCO"):
+            self.assertNotIn(europe, unique)
+        self.assertEqual(len(airports), 76)
         svo = next(item for item in airports if item["code"] == "SVO")
-        heathrow = next(item for item in airports if item["code"] == "LHR")
+        ist = next(item for item in airports if item["code"] == "IST")
         self.assertEqual(svo["kind"], "official")
         self.assertTrue(svo["supports_date"])
-        self.assertEqual(heathrow["kind"], "live")
-        self.assertFalse(heathrow["supports_date"])
+        self.assertEqual(ist["kind"], "live")
+        self.assertEqual(ist["group"], "Турция")
+        self.assertFalse(ist["supports_date"])
 
     def test_route_marks_heathrow_arrival(self):
         flight = select_flight(
