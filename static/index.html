@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Табло — расписание аэропортов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2310161d'/%3E%3Cpath fill='%23f0c14b' d='M4 18.5 14 16.2 14 8.2c0-.8.7-1.4 1.5-1.2.6.1 1 .7 1 1.3v7.6l10.2-2.2c.8-.2 1.6.4 1.6 1.2 0 .5-.3 1-.8 1.2L16.5 19.4V24l2.2 1.3c.4.2.5.6.3 1l-.4.6c-.2.3-.6.4-.9.2L15 25.4l-2.7 1.7c-.3.2-.7.1-.9-.2l-.4-.6c-.2-.4-.1-.8.3-1L13.5 24v-4.6L4.8 21.1c-.5.2-.8-.7-.8-1.2 0-.8.8-1.4 1.6-1.2z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <div>
+          <p class="eyebrow">Онлайн-табло</p>
+          <h1>Расписание рейсов</h1>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="refresh" class="ghost">Обновить</button>
+        <label class="check"><input type="checkbox" id="auto" checked> каждую минуту</label>
+        <button type="button" id="csv" class="solid">Скачать CSV</button>
+      </div>
+    </header>
+
+    <section id="airports" class="airports" aria-label="Аэропорты"></section>
+
+    <section class="toolbar">
+      <div class="segment" role="tablist" aria-label="Направление">
+        <button type="button" data-direction="departure" class="is-on" role="tab">Вылет</button>
+        <button type="button" data-direction="arrival" role="tab">Прилёт</button>
+      </div>
+      <div id="dates" class="dates">
+        <button type="button" data-shift="-1">Вчера</button>
+        <button type="button" data-shift="0">Сегодня</button>
+        <button type="button" data-shift="1">Завтра</button>
+        <input id="date" type="date" aria-label="Дата">
+      </div>
+      <label class="search">
+        <span class="sr">Поиск</span>
+        <input id="query" type="search" placeholder="Рейс, город или авиакомпания" autocomplete="off">
+      </label>
+    </section>
+
+    <p id="notice" class="banner" hidden></p>
+    <p id="error" class="banner bad" hidden></p>
+
+    <section id="stats" class="stats" aria-live="polite"></section>
+    <div id="chips" class="chips" role="toolbar" aria-label="Фильтр статуса"></div>
+    <p id="meta" class="meta"></p>
+
+    <div class="board" id="board">
+      <table>
+        <thead>
+          <tr>
+            <th>Время</th>
+            <th>Рейс</th>
+            <th id="city-head">Куда</th>
+            <th>Авиакомпания</th>
+            <th>Терминал</th>
+            <th id="gate-head">Выход</th>
+            <th>Статус</th>
+            <th>Борт</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p id="empty" class="empty" hidden>На эту дату рейсов нет.</p>
+
+    <footer>
+      <p>Данные берутся с публичных табло аэропортов и обновляются примерно раз в минуту. Это не официальный сервис аэропорта.</p>
+    </footer>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
