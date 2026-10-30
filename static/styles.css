@@ -293,6 +293,37 @@ footer { margin-top: 18px; color: var(--muted); font-size: 13px; }
 
 .board.is-loading { opacity: 0.55; }
 
+.picker { margin-bottom: 14px; }
+
+.results {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #182229;
+  overflow: auto;
+  max-height: 320px;
+}
+
+.results button {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #243140;
+  border-radius: 0;
+  background: transparent;
+  align-items: center;
+}
+
+.results button:last-child { border-bottom: 0; }
+.results .code { font-family: var(--mono); color: var(--amber); }
+.results .city { color: var(--muted); font-size: 13px; }
+
+.popular { display: flex; gap: 6px; flex-wrap: wrap; }
+.popular button { padding: 6px 10px; border-radius: 999px; font-family: var(--mono); font-size: 13px; }
+
 @media (max-width: 900px) {
   .toolbar, .airports, .top { grid-template-columns: 1fr; display: grid; }
   h1 { font-size: 26px; }

@@ -27,7 +27,15 @@
       </div>
     </header>
 
-    <section id="airports" class="airports" aria-label="Аэропорты"></section>
+    <section class="picker" aria-label="Аэропорт">
+      <label class="search">
+        <span class="sr">Аэропорт</span>
+        <input id="airport-query" type="search" placeholder="Аэропорт, город или код: SVO, Москва, London, Dubai" autocomplete="off">
+      </label>
+      <div id="airport-results" class="results" hidden></div>
+      <p id="airport-count" class="meta"></p>
+      <div id="popular" class="popular"></div>
+    </section>
 
     <section class="toolbar">
       <div class="segment" role="tablist" aria-label="Направление">
@@ -73,7 +81,7 @@
     <p id="empty" class="empty" hidden>На эту дату рейсов нет.</p>
 
     <footer>
-      <p>Данные берутся с публичных табло аэропортов и обновляются примерно раз в минуту. Это не официальный сервис аэропорта.</p>
+      <p>Шереметьево, Домодедово и Пулково читаются с их официальных табло. Остальные крупные аэропорты показаны по живым рейсам рядом с аэропортом. Это не официальный сервис аэропорта.</p>
     </footer>
   </div>
   <script src="/static/app.js"></script>

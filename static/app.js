@@ -1,3 +1,5 @@
+const POPULAR = ["SVO", "DME", "LED", "LHR", "CDG", "FRA", "AMS", "IST", "DXB", "DOH", "SIN", "HND", "ICN", "JFK", "LAX", "MAD"];
+
 const state = {
   airports: [],
   airport: "SVO",
@@ -19,7 +21,10 @@ const chips = [
   ["done", "Завершённые"],
 ];
 
-const airportsEl = document.querySelector("#airports");
+const airportQueryEl = document.querySelector("#airport-query");
+const airportResultsEl = document.querySelector("#airport-results");
+const airportCountEl = document.querySelector("#airport-count");
+const popularEl = document.querySelector("#popular");
 const rowsEl = document.querySelector("#rows");
 const queryEl = document.querySelector("#query");
 const dateEl = document.querySelector("#date");
@@ -62,6 +67,21 @@ function bind() {
     state.query = queryEl.value.trim();
     renderBoard();
   });
+  airportQueryEl.addEventListener("input", renderAirportResults);
+  airportQueryEl.addEventListener("focus", renderAirportResults);
+  airportResultsEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-code]");
+    if (!button) return;
+    chooseAirport(button.dataset.code);
+  });
+  popularEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-code]");
+    if (!button) return;
+    chooseAirport(button.dataset.code);
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".picker")) airportResultsEl.hidden = true;
+  });
   document.querySelector("#refresh").addEventListener("click", () => load(true));
   document.querySelector("#csv").addEventListener("click", downloadCsv);
   document.querySelector("#auto").addEventListener("change", (event) => {
@@ -84,28 +104,54 @@ async function boot() {
   } catch (error) {
     showError("Не удалось загрузить список аэропортов.");
   }
-  renderAirports();
+  renderPicker();
   load();
   scheduleRefresh();
 }
 
-function renderAirports() {
-  airportsEl.innerHTML = state.airports
+function renderPicker() {
+  const selected = currentAirport();
+  airportCountEl.textContent = selected
+    ? `${selected.name} · ${selected.city}${selected.country ? ", " + selected.country : ""} · ${state.airports.length} крупных аэропортов`
+    : `${state.airports.length} крупных аэропортов`;
+  popularEl.innerHTML = POPULAR.filter((code) => state.airports.some((item) => item.code === code))
     .map(
-      (item) => `<button type="button" class="airport${item.code === state.airport ? " is-on" : ""}" data-code="${item.code}">
+      (code) =>
+        `<button type="button" data-code="${code}" class="${code === state.airport ? "is-on" : ""}">${code}</button>`
+    )
+    .join("");
+}
+
+function renderAirportResults() {
+  const query = airportQueryEl.value.trim().toLowerCase();
+  if (!query) {
+    airportResultsEl.hidden = true;
+    airportResultsEl.innerHTML = "";
+    return;
+  }
+  const matches = state.airports
+    .filter((item) =>
+      [item.code, item.name, item.city, item.country, item.keywords].join(" ").toLowerCase().includes(query)
+    )
+    .slice(0, 12);
+  airportResultsEl.hidden = matches.length === 0;
+  airportResultsEl.innerHTML = matches
+    .map(
+      (item) => `<button type="button" data-code="${item.code}">
         <span class="code">${escapeHtml(item.code)}</span>
-        <span class="name">${escapeHtml(item.name)}</span>
-        <span class="city">${escapeHtml(item.city)}</span>
+        <span>${escapeHtml(item.name)}</span>
+        <span class="city">${escapeHtml([item.city, item.country].filter(Boolean).join(", "))}</span>
       </button>`
     )
     .join("");
-  airportsEl.querySelectorAll(".airport").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.airport = button.dataset.code;
-      renderAirports();
-      load();
-    });
-  });
+}
+
+function chooseAirport(code) {
+  state.airport = code;
+  airportQueryEl.value = "";
+  airportResultsEl.hidden = true;
+  renderPicker();
+  load();
 }
 
 function renderChips() {
@@ -168,6 +214,9 @@ function renderBoard() {
   const when = board.fetched_at ? formatClock(board.fetched_at) : "";
   metaEl.innerHTML = `${visible.length} из ${(board.flights || []).length} · обновлено в ${when} · <a href="${escapeAttr(board.source_url)}" target="_blank" rel="noreferrer">${escapeHtml(board.source_name)}</a>`;
   rowsEl.innerHTML = visible.map(renderRow).join("");
+  emptyEl.textContent = board.airport && board.airport.kind === "live"
+    ? "Сейчас рядом с аэропортом таких рейсов не видно."
+    : "На эту дату рейсов нет.";
   const nothing = visible.length === 0;
   emptyEl.hidden = !nothing;
   boardEl.hidden = nothing;
@@ -184,8 +233,10 @@ function renderRow(flight) {
       ? `<span class="sub">${delayLabel(flight)}</span>`
       : "";
   const actual = flight.actual ? `<span class="sub">факт ${formatClock(flight.actual)}</span>` : "";
+  const clock = flight.scheduled ? formatClock(flight.scheduled) : escapeHtml(flight.when_label || "—");
+  const day = flight.scheduled ? `<small>${formatDay(flight.scheduled)}</small>` : "";
   return `<tr>
-    <td><div class="when">${flight.scheduled ? formatClock(flight.scheduled) : "—"}<small>${flight.scheduled ? formatDay(flight.scheduled) : ""}</small></div>${estimate}${actual}</td>
+    <td><div class="when">${clock}${day}</div>${estimate}${actual}</td>
     <td><div class="flight-no">${escapeHtml(flight.flight || "—")}</div>${shares}</td>
     <td>${escapeHtml(titleCase(flight.city) || "—")}<span class="sub city-code">${escapeHtml(flight.city_code || "")}</span></td>
     <td>${escapeHtml(flight.airline || flight.airline_code || "—")}</td>
@@ -226,7 +277,7 @@ function kind(status) {
   if (text.includes("отмен")) return "cancel";
   if (text.includes("задерж")) return "delay";
   if (/вылет|отправ|призем|прибыл|закончен|выдача|багаж/.test(text)) return "done";
-  if (/посад|регист|ожид|пути/.test(text)) return "active";
+  if (/сниж|набир|земле|рядом|посад|регист|ожид|пути/.test(text)) return "active";
   return "plan";
 }
 

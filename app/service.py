@@ -1,50 +1,76 @@
-"""Сбор табло и короткий кэш, чтобы не дёргать аэропорты на каждый клик."""
+"""Сбор табло и короткий кэш, чтобы не дёргать источники на каждый клик."""
 
 from __future__ import annotations
 
+import json
 import time
 from datetime import date, datetime
+from pathlib import Path
 
 from app.flights import MOSCOW
 from app.http_client import SourceError
-from app.sources import dme, pulkovo, svo
+from app.sources import dme, live, pulkovo, svo
 
-AIRPORTS = {
+DATA = Path(__file__).resolve().parent / "data" / "airports.json"
+
+OFFICIAL = {
     "SVO": {
-        "code": "SVO",
-        "name": "Шереметьево",
-        "city": "Москва",
+        "fetch": svo.fetch,
         "supports_date": True,
         "source_name": "Официальное табло Шереметьево",
     },
     "DME": {
-        "code": "DME",
-        "name": "Домодедово",
-        "city": "Москва",
+        "fetch": dme.fetch,
         "supports_date": False,
         "source_name": "Онлайн-табло Домодедово",
     },
     "LED": {
-        "code": "LED",
-        "name": "Пулково",
-        "city": "Санкт-Петербург",
+        "fetch": pulkovo.fetch,
         "supports_date": True,
         "source_name": "Официальное табло Пулково",
     },
-}
-
-FETCHERS = {
-    "SVO": svo.fetch,
-    "DME": dme.fetch,
-    "LED": pulkovo.fetch,
 }
 
 TTL_SECONDS = 60
 _cache: dict[tuple, tuple[float, dict]] = {}
 
 
+def _catalog() -> dict[str, dict]:
+    rows = json.loads(DATA.read_text(encoding="utf-8"))
+    airports = {}
+    for row in rows:
+        airport = dict(row)
+        official = OFFICIAL.get(airport["code"])
+        if official:
+            airport["supports_date"] = official["supports_date"]
+            airport["kind"] = "official"
+            airport["source_name"] = official["source_name"]
+        else:
+            airport["supports_date"] = False
+            airport["kind"] = "live"
+            airport["source_name"] = "Живые рейсы рядом с аэропортом"
+        airports[airport["code"]] = airport
+    return airports
+
+
+AIRPORTS = _catalog()
+
+
 def list_airports() -> list[dict]:
-    return [dict(item) for item in AIRPORTS.values()]
+    visible = []
+    for airport in AIRPORTS.values():
+        visible.append(
+            {
+                "code": airport["code"],
+                "name": airport["name"],
+                "city": airport["city"],
+                "country": airport["country"],
+                "keywords": airport.get("keywords") or "",
+                "supports_date": airport["supports_date"],
+                "kind": airport["kind"],
+            }
+        )
+    return visible
 
 
 def today_moscow() -> date:
@@ -65,7 +91,7 @@ def get_schedule(code: str, direction: str, day: date, refresh: bool = False) ->
     if cached and not refresh and now - cached[0] < TTL_SECONDS:
         return cached[1]
     try:
-        loaded = FETCHERS[airport["code"]](direction, day)
+        loaded = _load(airport, direction, day)
     except SourceError as error:
         if cached:
             stale = dict(cached[1])
@@ -74,7 +100,14 @@ def get_schedule(code: str, direction: str, day: date, refresh: bool = False) ->
             return stale
         raise SourceError(str(error)) from error
     board = {
-        "airport": dict(airport),
+        "airport": {
+            "code": airport["code"],
+            "name": airport["name"],
+            "city": airport["city"],
+            "country": airport["country"],
+            "supports_date": airport["supports_date"],
+            "kind": airport["kind"],
+        },
         "direction": direction,
         "date": day.isoformat(),
         "fetched_at": datetime.now(MOSCOW).isoformat(timespec="seconds"),
@@ -82,8 +115,20 @@ def get_schedule(code: str, direction: str, day: date, refresh: bool = False) ->
         "source_url": loaded["source_url"],
         "notice": loaded.get("notice") or "",
         "stale": False,
-        "warning": "",
+        "warning": loaded.get("warning") or "",
         "flights": loaded["flights"],
     }
     _cache[key] = (now, board)
     return board
+
+
+def _load(airport: dict, direction: str, day: date) -> dict:
+    official = OFFICIAL.get(airport["code"])
+    if official is None:
+        return live.fetch(airport, direction, day)
+    try:
+        return official["fetch"](direction, day)
+    except SourceError:
+        fallback = live.fetch(airport, direction, day)
+        fallback["warning"] = "Официальное табло не ответило, показаны самолёты рядом с аэропортом."
+        return fallback

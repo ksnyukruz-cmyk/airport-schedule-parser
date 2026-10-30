@@ -18,7 +18,7 @@ STATIC = ROOT / "static"
 
 app = FastAPI(
     title="Табло аэропортов",
-    description="Парсер публичных табло Шереметьево, Домодедово и Пулково.",
+    description="Парсер табло крупных аэропортов мира.",
     version=__version__,
 )
 
