@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app import __version__
 from app.http_client import SourceError
 from app.service import get_schedule, list_airports, today_moscow
+from app.summary import get_summary
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / "static"
@@ -52,9 +53,22 @@ def schedule(
         raise HTTPException(status_code=502, detail=detail) from error
 
 
+@app.get("/api/summary")
+def summary(refresh: bool = False):
+    try:
+        return get_summary(refresh=refresh)
+    except Exception as error:
+        raise HTTPException(status_code=502, detail="Сводку сейчас не собрать. Попробуйте ещё раз.") from error
+
+
 @app.get("/")
 def index():
     return FileResponse(STATIC / "index.html")
+
+
+@app.get("/summary")
+def summary_page():
+    return FileResponse(STATIC / "summary.html")
 
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")

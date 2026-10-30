@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Сводка — топ-10 аэропортов РФ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2310161d'/%3E%3Cpath fill='%23f0c14b' d='M4 18.5 14 16.2 14 8.2c0-.8.7-1.4 1.5-1.2.6.1 1 .7 1 1.3v7.6l10.2-2.2c.8-.2 1.6.4 1.6 1.2 0 .5-.3 1-.8 1.2L16.5 19.4V24l2.2 1.3c.4.2.5.6.3 1l-.4.6c-.2.3-.6.4-.9.2L15 25.4l-2.7 1.7c-.3.2-.7.1-.9-.2l-.4-.6c-.2-.4-.1-.8.3-1L13.5 24v-4.6L4.8 21.1c-.5.2-.8-.7-.8-1.2 0-.8.8-1.4 1.6-1.2z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css?v=3">
+</head>
+<body>
+  <div class="page wide">
+    <header class="top">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <div>
+          <p class="eyebrow">Топ-10 по пассажиропотоку, 2024</p>
+          <h1>Сводка вылетов</h1>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="ghost" href="/">Табло</a>
+        <button type="button" id="refresh" class="ghost">Обновить</button>
+        <button type="button" id="csv" class="solid">Скачать CSV</button>
+      </div>
+    </header>
+
+    <p id="note" class="meta"></p>
+    <p id="error" class="banner bad" hidden></p>
+    <p id="wait" class="banner">Собираем сезонные расписания. Первый заход может занять около минуты.</p>
+
+    <section id="cards" class="cards" hidden></section>
+
+    <section id="coverage-wrap" hidden>
+      <h2>Откуда цифры</h2>
+      <div class="board coverage">
+        <table>
+          <thead>
+            <tr>
+              <th>АП</th>
+              <th>Пассажиры 2024</th>
+              <th>Вылетов</th>
+              <th>АК</th>
+              <th>Направлений</th>
+              <th>Период</th>
+              <th>Источник</th>
+            </tr>
+          </thead>
+          <tbody id="coverage"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="pivot-wrap" hidden>
+      <div class="schedule-head">
+        <h2>АК, направление, аэропорт</h2>
+        <p id="pivot-meta" class="meta"></p>
+      </div>
+      <div class="toolbar">
+        <label class="search">
+          <span class="sr">Поиск</span>
+          <input id="query" type="search" placeholder="Аэропорт, авиакомпания или город" autocomplete="off">
+        </label>
+      </div>
+      <div id="filters" class="chips" role="toolbar" aria-label="Аэропорты"></div>
+      <div class="board pivot">
+        <table>
+          <thead id="head"></thead>
+          <tbody id="body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <p>Порядок аэропортов — пассажиропоток Росавиации за 2024 год. В ячейках число вылетов, не пассажиров.</p>
+    </footer>
+  </div>
+  <script src="/static/summary.js?v=3"></script>
+</body>
+</html>

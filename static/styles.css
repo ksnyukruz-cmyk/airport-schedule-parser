@@ -107,6 +107,15 @@ h1 {
 
 .ghost { background: transparent; }
 
+a.solid, a.ghost {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
 .solid {
   background: var(--amber);
   color: #1b1404;
@@ -453,6 +462,30 @@ footer { margin-top: 18px; color: var(--muted); font-size: 13px; }
 }
 
 .hubs select:focus { outline: 1px solid var(--amber); outline-offset: 1px; }
+
+.page.wide { width: min(1440px, calc(100% - 32px)); }
+
+.coverage { max-height: none; margin: 12px 0 22px; }
+
+.pivot { max-height: 70vh; }
+
+.pivot th, .pivot td, .coverage th, .coverage td { white-space: nowrap; }
+
+.pivot thead tr:nth-child(2) th { top: 31px; }
+
+.pivot td.merge {
+  vertical-align: middle;
+  font-weight: 600;
+  background: #18242e;
+}
+
+.pivot tr.group-start td { border-top: 1px solid #3d5163; }
+
+.pivot td.num, .pivot th { text-align: right; }
+
+.pivot td:first-child, .pivot th:first-child { text-align: left; }
+
+.card strong { font-size: 22px; letter-spacing: -0.03em; }
 
 @media (max-width: 900px) {
   .toolbar, .airports, .top { grid-template-columns: 1fr; display: grid; }
