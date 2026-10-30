@@ -157,6 +157,7 @@ h1 {
 }
 
 .segment, .dates { display: flex; gap: 6px; flex-wrap: wrap; }
+.dates[hidden] { display: none; }
 
 .search input,
 #date {

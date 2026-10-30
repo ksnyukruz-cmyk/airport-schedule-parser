@@ -332,7 +332,7 @@ function csvCell(value) {
 function scheduleRefresh() {
   clearInterval(state.timer);
   state.timer = setInterval(() => {
-    if (document.querySelector("#auto").checked) load(true);
+    if (document.querySelector("#auto").checked) load(false);
   }, 60000);
 }
 

@@ -1,7 +1,7 @@
 import unittest
 
 from app.service import list_airports
-from app.sources.live import select_flight
+from app.sources.live import _aircraft_list, select_flight
 
 
 LHR = {"code": "LHR", "icao": "EGLL", "lat": 51.47, "lon": -0.46}
@@ -56,6 +56,11 @@ class LiveBoardTests(unittest.TestCase):
             LHR,
         )
         self.assertIsNone(flight)
+
+    def test_reads_both_feed_shapes(self):
+        self.assertEqual(len(_aircraft_list({"ac": [{"flight": "A"}]})), 1)
+        self.assertEqual(len(_aircraft_list({"aircraft": [{"flight": "A"}, {"flight": "B"}]})), 2)
+        self.assertIsNone(_aircraft_list({"msg": "no"}))
 
     def test_nearby_descent_without_route_is_arrival(self):
         flight = select_flight(

@@ -46,7 +46,10 @@ def schedule(
     except KeyError:
         raise HTTPException(status_code=404, detail="Этот аэропорт пока не подключён") from None
     except SourceError as error:
-        raise HTTPException(status_code=502, detail=str(error)) from error
+        detail = str(error)
+        if "429" in detail or "http" in detail.lower():
+            detail = "Лента рейсов сейчас перегружена. Подождите минуту и нажмите «Обновить»."
+        raise HTTPException(status_code=502, detail=detail) from error
 
 
 @app.get("/")

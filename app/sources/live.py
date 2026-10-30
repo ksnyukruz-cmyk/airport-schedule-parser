@@ -16,26 +16,31 @@ from pathlib import Path
 from app.flights import make_flight
 from app.http_client import SourceError, get_json
 
-SOURCE_URL = "https://adsb.lol/"
-POSITIONS = "https://api.adsb.lol/v2/lat/{lat}/lon/{lon}/dist/30"
 ROUTE = "https://api.adsb.lol/api/0/route/{callsign}"
+FEEDS = (
+    ("https://opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/30", "https://globe.adsb.fi/"),
+    ("https://api.adsb.lol/v2/lat/{lat}/lon/{lon}/dist/30", "https://adsb.lol/"),
+)
 CALLSIGN_RE = re.compile(r"^([A-Z]{3})([0-9A-Z]{1,5})$")
 ROUTE_TTL = 6 * 60 * 60
 MISS_TTL = 20 * 60
-MAX_LOOKUPS = 24
-BOARD_TTL = 50
+MAX_LOOKUPS = 12
+BOARD_TTL = 120
+BUSY = "Лента рейсов сейчас перегружена. Подождите минуту и нажмите «Обновить»."
 
 _AIRLINES = json.loads((Path(__file__).resolve().parent.parent / "data" / "airlines.json").read_text(encoding="utf-8"))
 _route_cache: dict[str, tuple[float, float, dict | None]] = {}
 _board_cache: dict[str, tuple[float, list]] = {}
 
 
-def fetch(airport: dict, direction: str, day) -> dict:
+def fetch(airport: dict, direction: str, day, force: bool = False) -> dict:
     del day
-    flights = [flight for flight in _board(airport) if flight["direction"] == direction]
+    flights, source_url, warning = _board(airport, force)
+    flights = [flight for flight in flights if flight["direction"] == direction]
     return {
         "flights": flights,
-        "source_url": SOURCE_URL,
+        "source_url": source_url,
+        "warning": warning,
         "notice": (
             "Для этого аэропорта нет открытого суточного табло. "
             "Показаны самолёты, которые сейчас рядом с ним: откуда летят или куда направляются. "
@@ -126,16 +131,18 @@ def _is_home(point: dict, airport: dict) -> bool:
     return iata == airport.get("code") or (airport.get("icao") and icao == airport.get("icao"))
 
 
-def _board(airport: dict) -> list:
+def _board(airport: dict, force: bool = False) -> tuple[list, str, str]:
     cached = _board_cache.get(airport["code"])
     now = time.monotonic()
-    if cached and now - cached[0] < BOARD_TTL:
-        return cached[1]
-    url = POSITIONS.format(lat=f"{airport['lat']:.4f}", lon=f"{airport['lon']:.4f}")
-    payload = _read_json(url)
-    aircraft = payload.get("ac") if isinstance(payload, dict) else None
-    if not isinstance(aircraft, list):
-        raise SourceError("лента рейсов вернула неожиданный ответ")
+    fresh_for = 20 if force else BOARD_TTL
+    if cached and now - cached[0] < fresh_for:
+        return cached[1], cached[2], ""
+    try:
+        aircraft, source_url = _positions(airport)
+    except SourceError:
+        if cached:
+            return cached[1], cached[2], BUSY
+        raise SourceError(BUSY) from None
     candidates = _candidates(aircraft)
     routes = _routes([item["callsign"] for item in candidates])
     flights = []
@@ -143,8 +150,35 @@ def _board(airport: dict) -> list:
         flight = select_flight(item, routes.get(item["callsign"]), airport)
         if flight:
             flights.append(flight)
-    _board_cache[airport["code"]] = (now, flights)
-    return flights
+    _board_cache[airport["code"]] = (now, flights, source_url)
+    return flights, source_url, ""
+
+
+def _positions(airport: dict) -> tuple[list, str]:
+    lat = f"{airport['lat']:.4f}"
+    lon = f"{airport['lon']:.4f}"
+    last_error = BUSY
+    for template, source_url in FEEDS:
+        try:
+            payload = _read_json(template.format(lat=lat, lon=lon))
+        except SourceError as error:
+            last_error = str(error)
+            continue
+        aircraft = _aircraft_list(payload)
+        if aircraft is None:
+            continue
+        return aircraft, source_url
+    raise SourceError(last_error if "429" not in last_error else BUSY)
+
+
+def _aircraft_list(payload) -> list | None:
+    if not isinstance(payload, dict):
+        return None
+    for key in ("ac", "aircraft"):
+        rows = payload.get(key)
+        if isinstance(rows, list):
+            return rows
+    return None
 
 
 def _read_json(url: str):

@@ -91,7 +91,7 @@ def get_schedule(code: str, direction: str, day: date, refresh: bool = False) ->
     if cached and not refresh and now - cached[0] < TTL_SECONDS:
         return cached[1]
     try:
-        loaded = _load(airport, direction, day)
+        loaded = _load(airport, direction, day, refresh)
     except SourceError as error:
         if cached:
             stale = dict(cached[1])
@@ -122,10 +122,10 @@ def get_schedule(code: str, direction: str, day: date, refresh: bool = False) ->
     return board
 
 
-def _load(airport: dict, direction: str, day: date) -> dict:
+def _load(airport: dict, direction: str, day: date, refresh: bool = False) -> dict:
     official = OFFICIAL.get(airport["code"])
     if official is None:
-        return live.fetch(airport, direction, day)
+        return live.fetch(airport, direction, day, force=refresh)
     try:
         return official["fetch"](direction, day)
     except SourceError:
