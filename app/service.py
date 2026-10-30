@@ -11,7 +11,7 @@ from app.flights import MOSCOW
 from app.http_client import SourceError
 from app.hubs import HUB_BY_CODE, HUBS, PRIMARY, PRIMARY_LABELS
 from app.places import country_for
-from app.sources import dme, live, pulkovo, svo
+from app.sources import dme, live, pulkovo, svo, vko
 
 DATA = Path(__file__).resolve().parent / "data" / "airports.json"
 
@@ -30,6 +30,11 @@ OFFICIAL = {
         "fetch": pulkovo.fetch,
         "supports_date": True,
         "source_name": "Официальное табло Пулково",
+    },
+    "VKO": {
+        "fetch": vko.fetch,
+        "supports_date": True,
+        "source_name": "Официальное табло Внуково",
     },
 }
 

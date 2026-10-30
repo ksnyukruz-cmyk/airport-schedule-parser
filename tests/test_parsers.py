@@ -4,6 +4,7 @@ from datetime import date
 from app.sources.dme import parse_html
 from app.sources.pulkovo import parse_rows
 from app.sources.svo import parse_items
+from app.sources.vko import decode_board, parse_rows as parse_vko
 
 
 class SvoTests(unittest.TestCase):
@@ -131,6 +132,54 @@ class DmeTests(unittest.TestCase):
         self.assertEqual(flight["status"], "Ожидается выдача багажа на ленте 2")
         self.assertEqual(flight["belt"], "2")
         self.assertTrue(flight["scheduled"].startswith("2026-10-30T07:00"))
+
+
+class VkoTests(unittest.TestCase):
+    def test_decode_roundtrip(self):
+        import base64
+
+        secret = "d87ea039-6704-4aec-84c3-c7b40b997f08".encode("ascii")
+        raw = '{"results":{"flights":[]}}'.encode("utf-8")
+        masked = bytes(byte ^ secret[index % len(secret)] for index, byte in enumerate(raw))
+        opened = decode_board(base64.b64encode(masked).decode("ascii"))
+        self.assertEqual(opened["results"]["flights"], [])
+
+    def test_parses_departure(self):
+        flights = parse_vko(
+            [
+                {
+                    "flt_id": 1,
+                    "flt_number": "ДР 1403",
+                    "fls_iata": "SVX",
+                    "fls_city_name": "Екатеринбург",
+                    "st": "2026-10-30 00:20:00",
+                    "et": "2026-10-30 12:45:00",
+                    "at": None,
+                    "terminal": "А",
+                    "gates": ["15A"],
+                    "belt": None,
+                    "delayed": True,
+                    "cancelled": False,
+                    "status": "Идёт регистрация",
+                    "airline_name": "Победа",
+                    "aircraft": {"icao": "B738", "name": "Boeing 737-800"},
+                    "codeshare": [{"flt_number": "SU 1403"}],
+                }
+            ],
+            date(2026, 10, 30),
+        )
+        self.assertEqual(len(flights), 1)
+        flight = flights[0]
+        self.assertEqual(flight["flight"], "ДР 1403")
+        self.assertEqual(flight["city"], "Екатеринбург")
+        self.assertEqual(flight["city_code"], "SVX")
+        self.assertEqual(flight["gate"], "15A")
+        self.assertEqual(flight["terminal"], "А")
+        self.assertEqual(flight["airline"], "Победа")
+        self.assertEqual(flight["aircraft"], "Boeing 737-800")
+        self.assertEqual(flight["codeshare"], ["SU 1403"])
+        self.assertTrue(flight["scheduled"].startswith("2026-10-30T00:20"))
+        self.assertTrue(flight["estimated"].startswith("2026-10-30T12:45"))
 
 
 if __name__ == "__main__":
